@@ -1,0 +1,36 @@
+-- pink_esp.lua
+_G.ESPEnabled = _G.ESPEnabled or false
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ESPBoxes = {}
+
+local function CreateESP(player)
+    local box = Instance.new("BoxHandleAdornment")
+    box.Adornee = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    box.Size = Vector3.new(2, 5, 1)
+    box.Color3 = Color3.fromRGB(255, 105, 180)
+    box.Transparency = 0.5
+    box.AlwaysOnTop = true
+    box.ZIndex = 10
+    box.Parent = workspace
+    return box
+end
+
+RunService.RenderStepped:Connect(function()
+    if _G.ESPEnabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                if not ESPBoxes[player] then
+                    ESPBoxes[player] = CreateESP(player)
+                else
+                    ESPBoxes[player].Adornee = player.Character.HumanoidRootPart
+                end
+            end
+        end
+    else
+        for player, box in pairs(ESPBoxes) do
+            box:Destroy()
+            ESPBoxes[player] = nil
+        end
+    end
+end)
