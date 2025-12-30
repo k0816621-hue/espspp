@@ -1,45 +1,80 @@
--- pink_esp.lua
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local ESPBoxes = {}
+local LocalPlayer = Players.LocalPlayer
 
-local function CreateESP(player)
-    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-    local box = Instance.new("BoxHandleAdornment")
-    box.Adornee = player.Character.HumanoidRootPart
-    box.Size = Vector3.new(2, 5, 1)
-    box.Color3 = Color3.fromRGB(255, 105, 180)
-    box.Transparency = 0.5
-    box.AlwaysOnTop = true
-    box.ZIndex = 10
-    box.Parent = workspace
-    ESPBoxes[player] = box
+-- Global toggle
+_G.ESPEnabled = false
+
+-- Store name ESP objects
+local NameTags = {}
+
+-- Function to create a name ESP
+local function CreateNameESP(player)
+    if not player.Character or not player.Character:FindFirstChild("Head") then return end
+
+    local Billboard = Instance.new("BillboardGui")
+    Billboard.Adornee = player.Character.Head
+    Billboard.Size = UDim2.new(0, 100, 0, 50)
+    Billboard.StudsOffset = Vector3.new(0, 2, 0)
+    Billboard.AlwaysOnTop = true
+
+    local NameLabel = Instance.new("TextLabel")
+    NameLabel.Text = player.Name
+    NameLabel.Size = UDim2.new(1, 0, 1, 0)
+    NameLabel.BackgroundTransparency = 1
+    NameLabel.TextColor3 = Color3.fromRGB(255, 105, 180) -- pink
+    NameLabel.TextScaled = true
+    NameLabel.Font = Enum.Font.SourceSansBold
+    NameLabel.Parent = Billboard
+
+    Billboard.Parent = workspace
+    NameTags[player] = Billboard
 end
 
-local function UpdateESP()
+-- Remove name ESP
+local function RemoveNameESP(player)
+    if NameTags[player] then
+        NameTags[player]:Destroy()
+        NameTags[player] = nil
+    end
+end
+
+-- Update ESP every frame
+RunService.RenderStepped:Connect(function()
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        if player ~= LocalPlayer then
             if _G.ESPEnabled then
-                if not ESPBoxes[player] then
-                    CreateESP(player)
+                if not NameTags[player] then
+                    CreateNameESP(player)
                 else
-                    ESPBoxes[player].Adornee = player.Character.HumanoidRootPart
+                    -- Update position
+                    if player.Character and player.Character:FindFirstChild("Head") then
+                        NameTags[player].Adornee = player.Character.Head
+                    end
                 end
             else
-                if ESPBoxes[player] then
-                    ESPBoxes[player]:Destroy()
-                    ESPBoxes[player] = nil
-                end
+                RemoveNameESP(player)
             end
         end
     end
-end
-
-RunService.RenderStepped:Connect(UpdateESP)
-
-Players.PlayerRemoving:Connect(function(player)
-    if ESPBoxes[player] then
-        ESPBoxes[player]:Destroy()
-        ESPBoxes[player] = nil
-    end
 end)
+
+-- Clean up when player leaves
+Players.PlayerRemoving:Connect(RemoveNameESP)
+
+-- Toggle UI integration
+local Toggle = Tab:CreateToggle({
+    Name = "Pink Names ESP",
+    CurrentValue = false,
+    Flag = "Toggle1",
+    Callback = function(Value)
+        _G.ESPEnabled = Value
+        if not Value then
+            -- Remove all ESP names immediately
+            for player, gui in pairs(NameTags) do
+                gui:Destroy()
+                NameTags[player] = nil
+            end
+        end
+    end,
+})
